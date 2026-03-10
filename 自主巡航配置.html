@@ -1,0 +1,563 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长江流域智慧执法取证平台 - 自主巡航配置</title>
+    <script>
+        if (window.location.protocol === 'file:') {
+            const fileName = window.location.pathname.split(/[\\/]/).pop() || 'index.html';
+            window.location.replace(`http://127.0.0.1:8000/${encodeURIComponent(fileName)}`);
+        }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'sys-dark': '#010815',
+                        'sys-blue': '#00F0FF',
+                        'sys-red': '#FF3366',
+                        'sys-green': '#00FF9D',
+                        'sys-panel': '#061325',
+                        'sys-glass': 'rgba(6, 19, 37, 0.75)',
+                        'sys-border': 'rgba(0, 240, 255, 0.25)'
+                    },
+                    fontFamily: {
+                        mono: ['"Cascadia Code"', '"SF Mono"', 'Consolas', 'monospace'],
+                        sans: ['"Inter"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'cyan-glow': '0 0 15px rgba(0, 240, 255, 0.4)',
+                        'red-glow': '0 0 20px rgba(255, 51, 102, 0.6)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        body {
+            background-color: #010815;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: #E2E8F0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism panel style with hard lines */
+        .glass-panel {
+            background: var(--tw-colors-sys-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--tw-colors-sys-border);
+            box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.03);
+            position: relative;
+        }
+
+        /* Decorative corners */
+        .glass-panel::before,
+        .glass-panel::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .glass-panel::before {
+            top: -1px;
+            left: -1px;
+            border-top: 2px solid #00F0FF;
+            border-left: 2px solid #00F0FF;
+        }
+
+        .glass-panel::after {
+            bottom: -1px;
+            right: -1px;
+            border-bottom: 2px solid #00F0FF;
+            border-right: 2px solid #00F0FF;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 11, 26, 0.8);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.4);
+            border-radius: 2px;
+        }
+
+        .hud-title {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.15) 0%, transparent 100%);
+            border-left: 3px solid #00F0FF;
+        }
+
+        /* Navigation specifics */
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: #00F0FF;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px #00F0FF;
+        }
+
+        .nav-item:hover::after,
+        .nav-item.active::after {
+            width: 100%;
+        }
+
+        .nav-item.active {
+            color: #00F0FF;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+        }
+        .tooltip-anchor {
+            position: relative;
+        }
+
+        .tooltip-anchor::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%) translateY(2px);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 240, 255, 0.28);
+            background: rgba(6, 19, 37, 0.92);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            color: #dffbff;
+            font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+            font-size: 10px;
+            letter-spacing: 0.03em;
+            line-height: 1.2;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            z-index: 1200;
+        }
+
+        .tooltip-anchor::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 2px);
+            transform: translateX(-50%) translateY(2px);
+            border: 4px solid transparent;
+            border-top-color: rgba(0, 240, 255, 0.28);
+            opacity: 0;
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            pointer-events: none;
+            z-index: 1200;
+        }
+
+        .tooltip-anchor:hover::after,
+        .tooltip-anchor:hover::before,
+        .tooltip-anchor:focus-visible::after,
+        .tooltip-anchor:focus-visible::before {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Form elements */
+        input[type="range"] {
+            accent-color: #00F0FF;
+        }
+
+        input[type="checkbox"] {
+            accent-color: #00F0FF;
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col pt-3 pb-3 px-4 gap-4">
+
+    <div id="app" class="flex-1 flex flex-col h-full mx-auto w-full max-w-[1920px]">
+
+        <!-- Header & Navigation -->
+        <header
+            class="flex justify-between items-center h-[72px] glass-panel px-6 mb-2 flex-shrink-0 z-50 shadow-cyan-glow">
+            <!-- Logo Area -->
+            <div class="flex items-center gap-4 w-1/4">
+                <a href="index.html" data-tip="返回主界面" aria-label="返回主界面"
+                    class="tooltip-anchor w-12 h-12 rounded-lg bg-sys-blue/10 border border-sys-blue flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.3)] overflow-hidden hover:scale-105 transition-transform cursor-pointer block">
+                    <img src="https://api.iconify.design/eos-icons:drone.svg?color=%2300f0ff" alt="Logo"
+                        class="w-8 h-8 object-contain">
+                </a>
+                <div class="flex flex-col">
+                    <h1
+                        class="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-sys-blue">
+                        长江流域智慧执法取证平台
+                    </h1>
+                    <span class="text-[10px] font-mono tracking-widest text-sys-blue/60 mt-0.5">DEV_ENVIRONMENT: V2.0.4
+                        DEMO</span>
+                </div>
+            </div>
+
+            <!-- Main Navigation -->
+            <nav class="flex items-center justify-center gap-8 w-2/4">
+                <a href="index.html"
+                    class="nav-item flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-sys-blue transition-colors">
+                    <i class="fa-solid fa-desktop"></i> 实时监控总览
+                </a>
+                <a href="自主巡航配置.html" class="nav-item active flex items-center gap-2 text-sm font-bold text-sys-blue">
+                    <i class="fa-solid fa-route"></i> 自主巡航配置
+                </a>
+                <a href="事后复现分析.html"
+                    class="nav-item flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-sys-blue transition-colors">
+                    <i class="fa-solid fa-scale-balanced"></i> 取证研判分析
+                </a>
+                <a href="设备管理后台.html"
+                    class="nav-item flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-sys-blue transition-colors">
+                    <i class="fa-solid fa-microchip"></i> 设备运维后台
+                </a>
+            </nav>
+
+            <!-- Status & Controls -->
+            <div class="flex items-center justify-end gap-6 font-mono text-sm w-1/4">
+                <a href="index.html"
+                    class="px-4 py-2 border border-sys-blue text-sys-blue text-sm font-bold hover:bg-sys-blue/20 transition-all shadow-cyan-glow flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> 返回主界面
+                </a>
+                <div class="text-sys-blue tracking-wider font-bold">
+                    <i class="fa-regular fa-clock mr-1"></i>{{ currentTime }}
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 grid grid-cols-2 gap-6 h-[calc(100vh-6rem)] overflow-y-auto p-2">
+
+            <!-- Left Column -->
+            <div class="flex flex-col gap-6">
+                <!-- Map / Route Preview -->
+                <div class="glass-panel p-4 flex flex-col h-1/2">
+                    <h2
+                        class="hud-title text-sm font-bold text-sys-blue uppercase tracking-wider pl-3 py-1.5 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-route"></i> 长江航道巡检路径规划
+                    </h2>
+                    <div class="flex-1 border border-sys-border relative mb-4 overflow-hidden">
+                        <img v-if="!offlineMapFailed"
+                            src="/assets/wuhan_yangtze_offline.svg"
+                            class="absolute inset-0 w-full h-full object-cover opacity-85"
+                            @error="handleOfflineMapError"
+                            alt="武汉长江航道离线地图底图">
+                        <iframe
+                            v-if="useOnlineMap"
+                            src="https://www.openstreetmap.org/export/embed.html?bbox=114.15%2C30.48%2C114.45%2C30.68&amp;layer=mapnik&amp;marker=30.58%2C114.30"
+                            class="absolute inset-0 w-full h-full border-0 saturate-150 transition-opacity duration-300"
+                            :class="onlineMapReady ? 'opacity-75' : 'opacity-0'"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            title="武汉长江航道地图"
+                            @load="onlineMapReady = true"></iframe>
+                        <div class="absolute inset-0 bg-gradient-to-br from-[#001121]/35 via-transparent to-[#001e30]/45"></div>
+                        <div
+                            class="absolute top-3 right-3 bg-[#001626]/80 text-sys-blue text-xs font-mono px-3 py-1 border border-sys-blue/40">
+                            {{ useOnlineMap ? (onlineMapReady ? '武汉长江在线地图' : '在线地图加载中...') : (offlineMapFailed ? '离线地图异常' : '武汉长江离线地图') }}
+                        </div>
+                        <button @click="toggleOnlineMap"
+                            class="absolute top-3 left-3 bg-[#001626]/85 text-sys-blue text-[11px] font-mono px-2 py-1 border border-sys-blue/40 hover:bg-sys-blue/15 transition-colors">
+                            {{ useOnlineMap ? '关闭在线层' : '开启在线层' }}
+                        </button>
+                        <!-- Route Line overlay -->
+                        <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M 40 170 Q 170 80, 320 140 T 760 120" fill="transparent" stroke="#00F0FF"
+                                stroke-width="3" stroke-dasharray="6,6" class="animate-pulse" />
+                        </svg>
+                        <div
+                            class="absolute bottom-3 left-3 bg-black/70 p-2 font-mono text-xs border border-sys-blue shadow-cyan-glow">
+                            <div><i class="fa-solid fa-map-pin text-sys-green"></i> 起点: 汉口江滩码头</div>
+                            <div><i class="fa-solid fa-flag-checkered text-sys-blue mt-1"></i> 终点: 武汉长江二桥段</div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex justify-between items-center text-sm font-mono text-sys-blue/80 bg-sys-panel p-2 border border-sys-border">
+                        <div class="flex gap-4">
+                            <button @click="simulateAction('自动优化航线成功！')"
+                                class="border border-gray-600 px-3 py-1 hover:border-sys-blue hover:text-sys-blue transition-colors"><i
+                                    class="fa-solid fa-magic mr-1"></i>自动优化航线</button>
+                            <button @click="simulateAction('核验点已添加于当前鼠标位置。')"
+                                class="border border-gray-600 px-3 py-1 hover:border-sys-blue hover:text-sys-blue transition-colors"><i
+                                    class="fa-solid fa-plus mr-1"></i>添加核验点</button>
+                        </div>
+                        <div class="tracking-wider">预估里程: 12.5km | 耗时: 18min | 节点: {{ waypoints }}个</div>
+                    </div>
+                </div>
+
+                <!-- AI Setup -->
+                <div class="glass-panel p-4 flex-1">
+                    <h2
+                        class="hud-title text-sm font-bold text-sys-blue uppercase tracking-wider pl-3 py-1.5 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-brain"></i> 长江水域 AI 识别矩阵
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <label
+                            class="flex items-center gap-3 p-3 bg-sys-panel border border-sys-border hover:bg-sys-blue/10 cursor-pointer transition-colors">
+                            <input type="checkbox" v-model="aiOptions.fishIllegal" class="w-4 h-4 text-sys-blue">
+                            <span class="text-sm font-bold tracking-widest text-white">非法捕捞监管</span>
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-sys-panel border border-sys-border hover:bg-sys-blue/10 cursor-pointer transition-colors">
+                            <input type="checkbox" v-model="aiOptions.sandIllegal" class="w-4 h-4 text-sys-blue">
+                            <span class="text-sm font-bold tracking-widest text-white">非法采砂监控</span>
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-sys-panel border border-sys-border hover:bg-sys-blue/10 cursor-pointer transition-colors">
+                            <input type="checkbox" v-model="aiOptions.threeFive" class="w-4 h-4 text-sys-blue">
+                            <span class="text-sm font-bold tracking-widest text-white">三五船只监管</span>
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-sys-panel border border-sys-border hover:bg-sys-blue/10 cursor-pointer transition-colors">
+                            <input type="checkbox" v-model="aiOptions.normalShips" class="w-4 h-4 text-sys-blue">
+                            <span class="text-sm font-bold tracking-widest text-white">常规船只识别</span>
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-sys-panel border border-sys-border hover:bg-sys-blue/10 cursor-pointer transition-colors">
+                            <input type="checkbox" v-model="aiOptions.shoreFishing" class="w-4 h-4 text-sys-blue">
+                            <span class="text-sm font-bold tracking-widest text-white">岸边垂钓监控</span>
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-sys-panel border border-sys-border hover:bg-sys-blue/10 cursor-pointer transition-colors">
+                            <input type="checkbox" v-model="aiOptions.illegalDump" class="w-4 h-4 text-sys-blue">
+                            <span class="text-sm font-bold tracking-widest text-white">违规倾倒监控</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-4 bg-[#02050D] p-4 border border-sys-border mb-4">
+                        <span class="text-gray-400 font-bold tracking-widest w-24">识别置信度</span>
+                        <input type="range" min="70" max="99" v-model="confidence" class="flex-1">
+                        <span class="font-mono text-sys-blue font-bold w-12 text-right">{{ confidence }}%</span>
+                    </div>
+
+                    <div
+                        class="bg-sys-green/10 border border-sys-green p-3 font-mono text-xs text-sys-green flex items-start gap-2 shadow-[0_0_10px_rgba(0,255,157,0.1)]">
+                        <i class="fa-solid fa-shield-halved mt-0.5"></i>
+                        <span>司法同步提示：识别触发后将自动进行 SHA-256 每一帧哈希固化分析。</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="flex flex-col gap-6">
+                <!-- Drone Parameters -->
+                <div class="glass-panel p-4 h-[460px]">
+                    <h2
+                        class="hud-title text-sm font-bold text-sys-blue uppercase tracking-wider pl-3 py-1.5 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> 无人机参数精调
+                    </h2>
+
+                    <div class="space-y-6 px-3">
+                        <div class="flex items-center gap-4 border-b border-sys-blue/20 pb-3">
+                            <label class="w-28 text-xs font-bold text-gray-300 tracking-widest">巡航高度</label>
+                            <input type="range" min="30" max="150" v-model="param.height" class="flex-1">
+                            <span class="w-14 text-right font-mono text-sys-blue font-bold text-base">{{ param.height
+                                }}<span class="text-xs">m</span></span>
+                        </div>
+                        <div class="flex items-center gap-4 border-b border-sys-blue/20 pb-3">
+                            <label class="w-28 text-xs font-bold text-gray-300 tracking-widest">巡航速度</label>
+                            <input type="range" min="20" max="80" v-model="param.speed" class="flex-1">
+                            <span class="w-14 text-right font-mono text-sys-blue font-bold text-base">{{ param.speed
+                                }}<span class="text-xs">km/h</span></span>
+                        </div>
+                        <div class="flex items-center gap-4 border-b border-sys-blue/20 pb-3">
+                            <label class="w-28 text-xs font-bold text-gray-300 tracking-widest">低电返航阈值</label>
+                            <input type="range" min="15" max="35" v-model="param.battery" class="flex-1">
+                            <span class="w-14 text-right font-mono text-sys-red font-bold text-base">{{ param.battery
+                                }}<span class="text-xs">%</span></span>
+                        </div>
+                        <div class="flex items-center gap-4 pb-3">
+                            <label class="w-28 text-xs font-bold text-gray-300 tracking-widest">信号中断对策</label>
+                            <select v-model="param.failsafe"
+                                class="flex-1 bg-sys-panel border border-sys-blue text-white p-2 text-sm font-mono outline-none shadow-cyan-glow">
+                                <option value="edge">自主执行预设航线 (边缘计算)</option>
+                                <option value="hover">原地悬停等待指令</option>
+                                <option value="rth">即刻开启一键返航</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Footer Panel -->
+                <div class="glass-panel p-6 flex flex-col justify-center gap-6 items-center flex-none">
+                    <p
+                        class="font-mono text-xs text-sys-blue/50 tracking-widest w-full text-center border-b border-sys-blue/20 pb-4">
+                        / SYSTEM_READY / ALL_PARAMETERS_VERIFIED /</p>
+                    <div class="flex justify-between w-full gap-4">
+                        <button @click="resetDefaults"
+                            class="px-6 py-3 border border-gray-500 text-gray-300 font-bold hover:bg-gray-800 transition-colors w-1/4 tracking-widest">重置默认</button>
+                        <button @click="saveConfig"
+                            class="px-6 py-3 bg-sys-blue/20 border border-sys-blue text-sys-blue font-bold hover:bg-sys-blue/40 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all flex-1 tracking-widest flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> 保存配置至边缘端
+                        </button>
+                        <button @click="launchMission"
+                            class="px-6 py-3 bg-sys-red text-white border border-sys-red font-bold hover:bg-red-500 shadow-[0_0_25px_rgba(255,51,102,0.8)] transition-all flex-[1.5] tracking-widest flex items-center justify-center gap-2 animate-pulse">
+                            <i class="fa-solid fa-plane-departure"></i> 一键启动自主巡航
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- Alert Modal -->
+        <div v-if="alertMsg"
+            class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 backdrop-blur-sm p-4"
+            @click.self="alertMsg = ''">
+            <div class="w-full max-w-md bg-[#061325] border border-sys-blue/35 rounded-md px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold tracking-widest text-sys-blue">系统提示</h2>
+                    <span class="text-[10px] font-mono text-sys-blue/60">{{ currentTime || '00:00:00.000' }}</span>
+                </div>
+
+                <p class="text-[13px] leading-6 text-gray-200 mb-4">{{ alertMsg }}</p>
+
+                <div class="flex justify-end">
+                    <button @click="alertMsg = ''"
+                        class="px-4 py-1.5 text-xs font-bold tracking-wider border border-sys-blue/60 text-sys-blue hover:bg-sys-blue/15 transition-colors rounded-sm">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                const currentTime = ref('');
+                let timeInterval;
+                const updateTime = () => {
+                    const now = new Date();
+                    currentTime.value = now.toLocaleTimeString('zh-CN', { hour12: false }) + '.' + now.getMilliseconds().toString().padStart(3, '0');
+                };
+
+                const waypoints = ref(12);
+                const confidence = ref(88);
+                const alertMsg = ref('');
+                const useOnlineMap = ref(false);
+                const onlineMapReady = ref(false);
+                const offlineMapFailed = ref(false);
+
+                const param = ref({
+                    height: 65,
+                    speed: 45,
+                    battery: 25,
+                    failsafe: 'edge'
+                });
+
+                const aiOptions = ref({
+                    fishIllegal: true,
+                    sandIllegal: true,
+                    threeFive: true,
+                    normalShips: true,
+                    shoreFishing: false,
+                    illegalDump: false
+                });
+
+                const simulateAction = (msg) => {
+                    alertMsg.value = msg;
+                };
+
+                const resetDefaults = () => {
+                    param.value = { height: 65, speed: 45, battery: 25, failsafe: 'edge' };
+                    confidence.value = 88;
+                    aiOptions.value = {
+                        fishIllegal: true,
+                        sandIllegal: true,
+                        threeFive: true,
+                        normalShips: true,
+                        shoreFishing: false,
+                        illegalDump: false
+                    };
+                };
+
+                const saveConfig = () => {
+                    alertMsg.value = "水域巡检参数已保存并同步至无人机边缘计算端。";
+                };
+
+                const launchMission = () => {
+                    alertMsg.value = "无人机起飞指令已发送！长江水域自主取证任务正式开始。";
+                };
+
+                const toggleOnlineMap = () => {
+                    useOnlineMap.value = !useOnlineMap.value;
+                    if (!useOnlineMap.value) {
+                        onlineMapReady.value = false;
+                    }
+                };
+
+                const handleOfflineMapError = () => {
+                    offlineMapFailed.value = true;
+                    useOnlineMap.value = true;
+                };
+
+                onMounted(() => {
+                    timeInterval = setInterval(updateTime, 100);
+                });
+                onUnmounted(() => {
+                    clearInterval(timeInterval);
+                });
+
+                return {
+                    currentTime,
+                    waypoints,
+                    confidence,
+                    useOnlineMap,
+                    onlineMapReady,
+                    offlineMapFailed,
+                    param,
+                    aiOptions,
+                    alertMsg,
+                    simulateAction,
+                    resetDefaults,
+                    saveConfig,
+                    launchMission,
+                    toggleOnlineMap,
+                    handleOfflineMapError
+                };
+            }
+        }).mount('#app');
+    </script>
+    <script src="ai_dispatch_widget.js"></script>
+</body>
+
+</html>
+
+
+

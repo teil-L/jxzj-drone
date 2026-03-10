@@ -1,0 +1,593 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长江流域智慧执法取证平台 - 设备运维后台</title>
+    <script>
+        if (window.location.protocol === 'file:') {
+            const fileName = window.location.pathname.split(/[\\/]/).pop() || 'index.html';
+            window.location.replace(`http://127.0.0.1:8000/${encodeURIComponent(fileName)}`);
+        }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'sys-dark': '#010815',
+                        'sys-blue': '#00F0FF',
+                        'sys-red': '#FF3366',
+                        'sys-green': '#00FF9D',
+                        'sys-yellow': '#FFC107',
+                        'sys-panel': '#061325',
+                        'sys-glass': 'rgba(6, 19, 37, 0.75)',
+                        'sys-border': 'rgba(0, 240, 255, 0.25)'
+                    },
+                    fontFamily: {
+                        mono: ['"Cascadia Code"', '"SF Mono"', 'Consolas', 'monospace'],
+                        sans: ['"Inter"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'cyan-glow': '0 0 15px rgba(0, 240, 255, 0.4)',
+                        'red-glow': '0 0 20px rgba(255, 51, 102, 0.6)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        body {
+            background-color: #010815;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: #E2E8F0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism panel style */
+        .glass-panel {
+            background: var(--tw-colors-sys-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--tw-colors-sys-border);
+            box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.03);
+            position: relative;
+        }
+
+        /* Decorative corners */
+        .glass-panel::before,
+        .glass-panel::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .glass-panel::before {
+            top: -1px;
+            left: -1px;
+            border-top: 2px solid #00F0FF;
+            border-left: 2px solid #00F0FF;
+        }
+
+        .glass-panel::after {
+            bottom: -1px;
+            right: -1px;
+            border-bottom: 2px solid #00F0FF;
+            border-right: 2px solid #00F0FF;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 11, 26, 0.8);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.4);
+            border-radius: 2px;
+        }
+
+        .hud-title {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.15) 0%, transparent 100%);
+            border-left: 3px solid #00F0FF;
+        }
+
+        /* Navigation specifics */
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: #00F0FF;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px #00F0FF;
+        }
+
+        .nav-item:hover::after,
+        .nav-item.active::after {
+            width: 100%;
+        }
+
+        .nav-item.active {
+            color: #00F0FF;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+        }
+        .tooltip-anchor {
+            position: relative;
+        }
+
+        .tooltip-anchor::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%) translateY(2px);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 240, 255, 0.28);
+            background: rgba(6, 19, 37, 0.92);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            color: #dffbff;
+            font-family: "Cascadia Code", "SF Mono", Consolas, monospace;
+            font-size: 10px;
+            letter-spacing: 0.03em;
+            line-height: 1.2;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            z-index: 1200;
+        }
+
+        .tooltip-anchor::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 2px);
+            transform: translateX(-50%) translateY(2px);
+            border: 4px solid transparent;
+            border-top-color: rgba(0, 240, 255, 0.28);
+            opacity: 0;
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            pointer-events: none;
+            z-index: 1200;
+        }
+
+        .tooltip-anchor:hover::after,
+        .tooltip-anchor:hover::before,
+        .tooltip-anchor:focus-visible::after,
+        .tooltip-anchor:focus-visible::before {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Inputs & Switches */
+        input[type="range"] {
+            accent-color: #00F0FF;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #334;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #00F0FF;
+            box-shadow: 0 0 10px #00F0FF;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(16px);
+            background-color: #000;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col pt-3 pb-3 px-4 gap-4">
+
+    <div id="app" class="flex-1 flex flex-col h-full mx-auto w-full max-w-[1920px]">
+
+        <!-- Header -->
+        <header
+            class="flex justify-between items-center h-[72px] glass-panel px-6 mb-2 flex-shrink-0 z-50 shadow-cyan-glow">
+            <div class="flex items-center gap-4 w-1/4">
+                <a href="index.html" data-tip="返回主界面" aria-label="返回主界面"
+                    class="tooltip-anchor w-12 h-12 rounded-lg bg-sys-blue/10 border border-sys-blue flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.3)] overflow-hidden hover:scale-105 transition-transform cursor-pointer block">
+                    <img src="https://api.iconify.design/eos-icons:drone.svg?color=%2300f0ff" alt="Logo"
+                        class="w-8 h-8 object-contain">
+                </a>
+                <div class="flex flex-col">
+                    <h1
+                        class="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-sys-blue">
+                        长江流域智慧执法取证平台</h1>
+                    <span class="text-[10px] font-mono tracking-widest text-sys-blue/60 mt-0.5">DEV_ENVIRONMENT: V2.0.4
+                        DEMO</span>
+                </div>
+            </div>
+
+            <!-- Main Navigation -->
+            <nav class="flex items-center justify-center gap-8 w-2/4">
+                <a href="index.html"
+                    class="nav-item flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-sys-blue transition-colors">
+                    <i class="fa-solid fa-desktop"></i> 实时监控总览
+                </a>
+                <a href="自主巡航配置.html"
+                    class="nav-item flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-sys-blue transition-colors">
+                    <i class="fa-solid fa-route"></i> 自主巡航配置
+                </a>
+                <a href="事后复现分析.html"
+                    class="nav-item flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-sys-blue transition-colors">
+                    <i class="fa-solid fa-scale-balanced"></i> 取证研判分析
+                </a>
+                <a href="设备管理后台.html" class="nav-item active flex items-center gap-2 text-sm font-bold text-sys-blue">
+                    <i class="fa-solid fa-microchip"></i> 设备运维后台
+                </a>
+            </nav>
+
+            <div class="flex items-center justify-end gap-6 font-mono text-sm w-1/4">
+                <a href="index.html"
+                    class="px-4 py-2 border border-sys-blue text-sys-blue text-sm font-bold hover:bg-sys-blue/20 transition-all shadow-cyan-glow flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> 返回主界面
+                </a>
+                <div class="text-sys-blue tracking-wider font-bold">
+                    <i class="fa-regular fa-clock mr-1"></i>{{ currentTime }}
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 grid grid-cols-12 gap-4 h-[calc(100vh-6rem)]">
+
+            <!-- Left: Stats & Logs -->
+            <div class="col-span-3 flex flex-col gap-4">
+                <div class="glass-panel p-4 flex-none grid grid-cols-2 gap-3">
+                    <div class="bg-sys-panel border border-sys-blue/30 p-4 text-center">
+                        <span class="text-2xl font-bold text-sys-blue font-mono block">04</span>
+                        <span class="text-xs text-gray-400 mt-1 block tracking-widest">在网无人机</span>
+                    </div>
+                    <div class="bg-sys-panel border border-sys-blue/30 p-4 text-center">
+                        <span class="text-2xl font-bold text-sys-blue font-mono block">02</span>
+                        <span class="text-xs text-gray-400 mt-1 block tracking-widest">边缘基站</span>
+                    </div>
+                    <div
+                        class="col-span-2 bg-sys-panel border border-sys-green/50 p-4 text-center relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-sys-green/5 group-hover:bg-sys-green/10 transition-colors">
+                        </div>
+                        <span class="text-3xl font-bold text-sys-green font-mono block tracking-widest">98.5<span
+                                class="text-sm">%</span></span>
+                        <span class="text-xs text-gray-400 mt-1 block tracking-widest">全系统健康度评估 (PHM)</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 flex-1 flex flex-col">
+                    <h2
+                        class="hud-title text-sm font-bold text-sys-blue uppercase tracking-wider pl-3 py-1.5 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved"></i> 安全审计与通知日志
+                    </h2>
+                    <div class="flex-1 overflow-y-auto font-mono text-[11px] leading-7 text-gray-400 space-y-1 pr-2">
+                        <p><span class="text-sys-yellow font-bold">[WARN]</span> UAV-01 4号电机震动略高 (3.2g)</p>
+                        <p><span class="text-sys-green font-bold">[INFO]</span> 国密签名证书更新成功 (v12.4)</p>
+                        <p><span class="text-sys-green font-bold">[INFO]</span> 汉口段限飞数据库 V4.2 已推送下发</p>
+                        <p><span class="text-sys-red font-bold">[ALRT]</span> 信号快传模块核心温度逼近阈值</p>
+                        <p><span class="text-sys-blue font-bold">[SYS]</span> 边缘节点-2 存储碎片整理完毕</p>
+                        <p><span class="text-sys-green font-bold">[INFO]</span> 区块链司法存证节点通讯正常</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle: Device Cards -->
+            <div class="col-span-6 flex flex-col gap-4 overflow-y-auto pr-2">
+                <!-- Drone Card -->
+                <div class="glass-panel p-5 group hover:border-sys-blue transition-colors">
+                    <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-full bg-sys-blue/10 border border-sys-blue flex items-center justify-center shadow-cyan-glow">
+                                <i class="fa-solid fa-plane text-sys-blue"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white tracking-widest">UAV-长江巡护-01</h3>
+                                <span class="text-[10px] font-mono bg-sys-blue/20 text-sys-blue px-2 py-0.5 rounded">SN:
+                                    YZ2026-X001</span>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-2 text-xs font-bold text-sys-green font-mono bg-sys-green/10 border border-sys-green/30 px-3 py-1 rounded">
+                            <span class="w-2 h-2 rounded-full bg-sys-green animate-pulse"></span> 在线 (正在执行任务)
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Module 1 -->
+                        <div class="bg-[#02050D] border border-sys-border p-3 text-xs">
+                            <h4 class="text-sys-blue font-bold tracking-widest mb-3 flex items-center gap-2"><i
+                                    class="fa-solid fa-battery-full"></i> 动力与能源</h4>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>电池循环</span> <span
+                                    class="text-white font-mono">42 次</span></div>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>核心电压</span> <span
+                                    class="text-white font-mono">22.8 V</span></div>
+                            <div class="flex justify-between mb-3 text-gray-400"><span>电机SOH</span> <span
+                                    class="text-sys-green font-mono font-bold">优 (94%)</span></div>
+                            <div class="w-full h-1 bg-gray-700 overflow-hidden">
+                                <div class="h-full bg-sys-green" style="width: 94%"></div>
+                            </div>
+                        </div>
+                        <!-- Module 2 -->
+                        <div class="bg-[#02050D] border border-sys-border p-3 text-xs">
+                            <h4 class="text-sys-blue font-bold tracking-widest mb-3 flex items-center gap-2"><i
+                                    class="fa-solid fa-microchip"></i> 边缘 AI (RK3588)</h4>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>NPU 负载</span> <span
+                                    class="text-white font-mono">65%</span></div>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>推理延迟</span> <span
+                                    class="text-white font-mono">32ms</span></div>
+                            <div class="flex justify-between mb-3 text-gray-400"><span>核心温度</span> <span
+                                    class="text-sys-yellow font-mono font-bold">54.2 ℃</span></div>
+                            <div class="w-full h-1 bg-gray-700 overflow-hidden">
+                                <div class="h-full bg-sys-yellow" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <!-- Module 3 -->
+                        <div class="bg-[#02050D] border border-sys-border p-3 text-xs">
+                            <h4 class="text-sys-blue font-bold tracking-widest mb-3 flex items-center gap-2"><i
+                                    class="fa-solid fa-satellite-dish"></i> 无线快传链路</h4>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>当前带宽</span> <span
+                                    class="text-white font-mono">45 Mbps</span></div>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>信噪比</span> <span
+                                    class="text-white font-mono">28 dB</span></div>
+                            <div class="flex justify-between mb-3 text-gray-400"><span>AES密钥</span> <span
+                                    class="text-white font-mono font-bold">已轮转安全</span></div>
+                            <div class="w-full h-1 bg-gray-700 overflow-hidden">
+                                <div class="h-full bg-sys-blue" style="width: 98%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Base Station Card -->
+                <div class="glass-panel p-5 mt-2 group hover:border-sys-green transition-colors">
+                    <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-full bg-sys-green/10 border border-sys-green flex items-center justify-center shadow-[0_0_15px_rgba(0,255,157,0.3)]">
+                                <i class="fa-solid fa-server text-sys-green"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white tracking-widest">边缘基站-汉口站-01</h3>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-2 text-xs font-bold text-sys-green font-mono bg-sys-green/10 border border-sys-green/30 px-3 py-1 rounded">
+                            <span class="w-2 h-2 rounded-full bg-sys-green shadow-[0_0_5px_#00FF9D]"></span> 运行平顺
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-[#02050D] border border-sys-border p-3 text-xs">
+                            <h4 class="text-sys-green font-bold tracking-widest mb-3 flex items-center gap-2"><i
+                                    class="fa-solid fa-hard-drive"></i> 存储节点</h4>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>已用容量</span> <span
+                                    class="text-white font-mono">1.2TB / 4TB</span></div>
+                            <div class="flex justify-between text-gray-400"><span>存证包</span> <span
+                                    class="text-white font-mono">452 件</span></div>
+                        </div>
+                        <div class="bg-[#02050D] border border-sys-border p-3 text-xs">
+                            <h4 class="text-sys-green font-bold tracking-widest mb-3 flex items-center gap-2"><i
+                                    class="fa-solid fa-earth-asia"></i> 北斗差分卫星链路</h4>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>差分定位</span> <span
+                                    class="text-sys-green font-mono font-bold">RTK 锁定</span></div>
+                            <div class="flex justify-between text-gray-400"><span>搜星数量</span> <span
+                                    class="text-white font-mono">24 颗</span></div>
+                        </div>
+                        <div class="bg-[#02050D] border border-sys-border p-3 text-xs">
+                            <h4 class="text-sys-green font-bold tracking-widest mb-3 flex items-center gap-2"><i
+                                    class="fa-solid fa-lock"></i> 安全网关审计</h4>
+                            <div class="flex justify-between mb-1 text-gray-400"><span>固件特征码</span> <span
+                                    class="text-white font-mono">已校验对齐</span></div>
+                            <div class="flex justify-between text-gray-400"><span>网络入侵防御</span> <span
+                                    class="text-sys-green font-mono font-bold">激活状态</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Config & Buttons -->
+            <div class="col-span-3 flex flex-col gap-4">
+                <div class="glass-panel p-4 flex-none">
+                    <h2
+                        class="hud-title text-sm font-bold text-sys-blue uppercase tracking-wider pl-3 py-1.5 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-plane-slash"></i> 安全飞行与返航逻辑强控
+                    </h2>
+
+                    <div class="space-y-5 px-2">
+                        <div>
+                            <div class="flex justify-between items-center mb-2 text-xs font-bold text-gray-300">
+                                <span>强制 RTH (返航) 电量阈值</span>
+                                <span class="text-sys-blue font-mono">{{ rthBattery }}%</span>
+                            </div>
+                            <input type="range" min="15" max="40" v-model="rthBattery" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="text-xs font-bold text-gray-300 mb-2">信号丢失应急策略</div>
+                            <select
+                                class="w-full bg-[#02050D] border border-sys-border text-sys-blue font-mono p-2 text-xs outline-none">
+                                <option>原路自动返航 (返回起飞点)</option>
+                                <option>就地安全降落</option>
+                                <option>原地悬停等待指令</option>
+                            </select>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-gray-300">开启限飞区自动避让</span>
+                            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-gray-300">数据链路端到端强加密</span>
+                            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 flex-1 flex flex-col">
+                    <h2
+                        class="hud-title text-sm font-bold text-sys-blue uppercase tracking-wider pl-3 py-1.5 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-code-merge"></i> 固件与 AI 模型版本池
+                    </h2>
+                    <div class="flex-1 space-y-3 font-mono text-[11px]">
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Flight Controller:</span>
+                            <span class="text-sys-green font-bold">v4.5.1-Stable</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">AI Model (YOLOv8):</span>
+                            <span class="text-sys-green font-bold">v2.1-Yangtze</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Secure AES Module:</span>
+                            <span class="text-sys-green font-bold">v1.0-FIPS</span>
+                        </div>
+                        <button @click="simulateAction('正在向云端校验模块完整性及版本更新... 均已是最新版本！')"
+                            class="w-full py-2 border border-gray-500 hover:border-sys-blue text-gray-300 hover:text-sys-blue font-bold tracking-widest mt-4 transition-colors">
+                            <i class="fa-solid fa-arrows-rotate mr-2"></i>检查全量更新
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 mt-auto">
+                    <button @click="simulateAction('远程维护隧道已打通，即将载入终端控制台...') "
+                        class="w-full py-3 bg-sys-panel border border-sys-border hover:border-white text-sys-blue hover:text-white font-bold tracking-widest transition-all shadow-lg flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-terminal"></i> 打开远程 SSH 维护控制台
+                    </button>
+                    <button @click="simulateAction('全局安全策略及配置参数已成功下发同步至机群！')"
+                        class="w-full py-3 bg-sys-blue text-black font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(0,240,255,0.5)] hover:bg-white flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-network-wired"></i> 将配置同步下发至机群
+                    </button>
+                </div>
+            </div>
+
+        </main>
+        <!-- Alert Modal -->
+        <div v-if="alertMsg"
+            class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 backdrop-blur-sm p-4"
+            @click.self="alertMsg = ''">
+            <div class="w-full max-w-md bg-[#061325] border border-sys-blue/35 rounded-md px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold tracking-widest text-sys-blue">系统提示</h2>
+                    <span class="text-[10px] font-mono text-sys-blue/60">{{ currentTime || '00:00:00.000' }}</span>
+                </div>
+
+                <p class="text-[13px] leading-6 text-gray-200 mb-4">{{ alertMsg }}</p>
+
+                <div class="flex justify-end">
+                    <button @click="alertMsg = ''"
+                        class="px-4 py-1.5 text-xs font-bold tracking-wider border border-sys-blue/60 text-sys-blue hover:bg-sys-blue/15 transition-colors rounded-sm">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                const currentTime = ref('');
+                let timeInterval;
+                const updateTime = () => {
+                    const now = new Date();
+                    currentTime.value = now.toLocaleTimeString('zh-CN', { hour12: false }) + '.' + now.getMilliseconds().toString().padStart(3, '0');
+                };
+
+                const rthBattery = ref(25);
+                const alertMsg = ref('');
+
+                const simulateAction = (msg) => { alertMsg.value = msg; };
+
+                onMounted(() => {
+                    timeInterval = setInterval(updateTime, 100);
+                });
+                onUnmounted(() => {
+                    clearInterval(timeInterval);
+                });
+
+                return {
+                    currentTime,
+                    rthBattery,
+                    alertMsg,
+                    simulateAction
+                };
+            }
+        }).mount('#app');
+    </script>
+    <script src="ai_dispatch_widget.js"></script>
+</body>
+
+</html>
+
+

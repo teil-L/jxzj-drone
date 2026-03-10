@@ -1,0 +1,7 @@
+Loading YOLOv8 Model from: D:\OneDrive\桌面\project\drone_demo\assets\best.pt
+---------------------------------------------------------
+Drone YOLOv8 Backend Server Started on http://0.0.0.0:5000
+Ensure the frontend accesses the stream via http://127.0.0.1:5000/video_feed
+---------------------------------------------------------
+ * Serving Flask app 'server'
+ * Debug mode: off
