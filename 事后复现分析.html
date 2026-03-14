@@ -705,7 +705,7 @@
                 };
 
                 const captureReportEvidence = async () => {
-                    const snapshotUrl = `http://127.0.0.1:5000/snapshot?t=${Date.now()}`;
+                    const snapshotUrl = `https://127.0.0.1:5000/snapshot?t=${Date.now()}`;
                     try {
                         const resp = await fetch(snapshotUrl, { cache: 'no-store' });
                         const contentType = resp.headers.get('content-type') || '';
@@ -736,7 +736,7 @@
                         const eventText = records.value[activeRecord.value]
                             ? `${records.value[activeRecord.value].title} / ${records.value[activeRecord.value].tag}`
                             : "取证复盘场景";
-                        const resp = await fetch("http://127.0.0.1:5000/api/dispatch-suggestion", {
+                        const resp = await fetch("https://api.jxzj-tech.cn/api/dispatch-suggestion", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
