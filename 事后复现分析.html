@@ -705,7 +705,7 @@
                 };
 
                 const captureReportEvidence = async () => {
-                    const snapshotUrl = `https://127.0.0.1:5000/snapshot?t=${Date.now()}`;
+                    const snapshotUrl = `https://api.jxzj-tech.cn/snapshot?t=${Date.now()}`;
                     try {
                         const resp = await fetch(snapshotUrl, { cache: 'no-store' });
                         const contentType = resp.headers.get('content-type') || '';
